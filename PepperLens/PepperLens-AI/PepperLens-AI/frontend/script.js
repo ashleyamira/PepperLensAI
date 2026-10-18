@@ -1,0 +1,332 @@
+
+const API_DETECT_URL = `${window.PEPPERLENS_API_BASE || "http://localhost:8000"}/detect`;
+const API_ASK_URL = `${window.PEPPERLENS_API_BASE || "http://localhost:8000"}/ask`;
+
+let selectedFile = null;
+
+function parseMarkdown(text) {
+  if (!text) return "";
+  let html = text;
+  html = html.replace(/(?:^\|.*\|(?:\n|\r|$))+/gm, function (match) {
+    let rows = match.trim().split("\n");
+    let tableHtml =
+      '<div class="overflow-x-auto my-5 rounded-xl ring-1 ring-slate-200 shadow-sm"><table class="w-full text-sm text-left text-slate-600">';
+
+    rows.forEach((row, index) => {
+      if (row.match(/^\|[\s\-\:]+\|/)) return;
+
+      let cleanRow = row.replace(/^\||\|$/g, "");
+      let cols = cleanRow.split("|").map((c) => c.trim());
+
+      tableHtml +=
+        '<tr class="border-b border-slate-200 last:border-0 hover:bg-slate-50 transition-colors">';
+      cols.forEach((col) => {
+        if (index === 0) {
+          tableHtml += `<th class="px-4 py-3 bg-slate-100 font-semibold text-slate-700 whitespace-nowrap">${col}</th>`;
+        } else {
+          tableHtml += `<td class="px-4 py-3 align-top">${col}</td>`;
+        }
+      });
+      tableHtml += "</tr>";
+    });
+    tableHtml += "</table></div>";
+    return tableHtml;
+  });
+  html = html.replace(
+    /^##\s+(.*$)/gim,
+    '<h2 class="text-xl font-bold text-slate-800 mt-5 mb-2">$1</h2>',
+  );
+  html = html.replace(
+    /^###\s+(.*$)/gim,
+    '<h3 class="text-lg font-bold text-slate-800 mt-5 mb-2">$1</h3>',
+  );
+  html = html.replace(
+    /^####\s+(.*$)/gim,
+    '<h3 class="text-lg font-bold text-slate-800 mt-5 mb-2">$1</h3>',
+  );
+  html = html.replace(/^---$/gm, '<hr class="my-4 border-slate-200" />');
+  html = html.replace(
+    /\*\*(.*?)\*\*/g,
+    '<strong class="font-bold text-slate-800">$1</strong>',
+  );
+  html = html.replace(
+    /(?<!^)\*(.*?)\*/g,
+    '<em class="italic text-slate-700">$1</em>',
+  );
+  html = html.replace(
+    /^[\*\-•]\s+(.*$)/gim,
+    '<div class="flex gap-2 mt-1.5"><span class="text-rose-500 font-bold shrink-0">•</span><span>$1</span></div>',
+  );
+  html = html.replace(
+    /^(\d+)\.\s+(.*$)/gim,
+    '<div class="flex gap-2 mt-1.5"><span class="text-rose-500 font-bold shrink-0">$1.</span><span>$2</span></div>',
+  );
+  html = html.replace(/\n/g, "<br/>");
+  html = html.replace(/(<br\/>)+<hr/g, "<hr");
+  html = html.replace(/<hr(.*?)>(<br\/>)+/g, "<hr$1>");
+  html = html.replace(/(<br\/>)+<h2/g, "<h2");
+  html = html.replace(/<\/h2>(<br\/>)+/g, "</h2>");
+  html = html.replace(/(<br\/>)+<h3/g, "<h3");
+  html = html.replace(/<\/h3>(<br\/>)+/g, "</h3>");
+  html = html.replace(/(<br\/>)+<div/g, "<div");
+  html = html.replace(/<\/div>(<br\/>)+/g, "</div>");
+  html = html.replace(/(<br\/>){3,}/g, "<br/><br/>");
+
+  return html;
+}
+
+function switchMenu(menu) {
+  const secDetect = document.getElementById("section-detect");
+  const secChat = document.getElementById("section-chat");
+  const btnDetect = document.getElementById("btn-menu-detect");
+  const btnChat = document.getElementById("btn-menu-chat");
+
+  const activeClass =
+    "flex-1 md:w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-xl font-medium transition-all bg-rose-50 text-rose-600 text-sm md:text-base whitespace-nowrap shadow-sm md:shadow-none";
+  const inactiveClass =
+    "flex-1 md:w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-xl font-medium transition-all text-slate-500 hover:bg-slate-50 hover:text-slate-700 text-sm md:text-base whitespace-nowrap";
+
+  if (menu === "detect") {
+    secDetect.classList.remove("hidden");
+    secChat.classList.add("hidden");
+    secChat.classList.remove("flex");
+    btnDetect.className = activeClass;
+    btnChat.className = inactiveClass;
+  } else {
+    secDetect.classList.add("hidden");
+    secChat.classList.remove("hidden");
+    secChat.classList.add("flex");
+    btnChat.className = activeClass;
+    btnDetect.className = inactiveClass;
+  }
+}
+
+function handleFileChange(event) {
+  const file = event.target.files[0];
+  if (file) {
+    selectedFile = file;
+    const fileNameEl = document.getElementById("file-name");
+    if (fileNameEl) {
+      fileNameEl.textContent = `File: ${file.name}`;
+      fileNameEl.classList.remove("hidden");
+    }
+    document.getElementById("btn-upload").classList.remove("hidden");
+    const imagePreview = document.getElementById("image-preview");
+    const uploadPlaceholder = document.getElementById("upload-placeholder");
+    imagePreview.src = URL.createObjectURL(file);
+    if (uploadPlaceholder) uploadPlaceholder.classList.add("hidden");
+    if (imagePreview) imagePreview.classList.remove("hidden");
+    const detectResult = document.getElementById("detect-result");
+    const detectError = document.getElementById("detect-error");
+    if (detectResult) detectResult.classList.add("hidden");
+    if (detectError) detectError.classList.add("hidden");
+  }
+}
+
+async function handleUpload() {
+  if (!selectedFile) return;
+
+  const btnUpload = document.getElementById("btn-upload");
+  const errorContainer = document.getElementById("detect-error");
+  const resultContainer = document.getElementById("detect-result");
+
+  btnUpload.disabled = true;
+  btnUpload.textContent = "Memproses...";
+  errorContainer.classList.add("hidden");
+  resultContainer.classList.add("hidden");
+
+  const formData = new FormData();
+  formData.append("file", selectedFile);
+
+  try {
+    const response = await fetch(API_DETECT_URL, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error(`Error server: ${response.status}`);
+
+    const data = await response.json();
+    tampilkanHasilDeteksi(data);
+    const imagePreview = document.getElementById("image-preview");
+    const uploadPlaceholder = document.getElementById("upload-placeholder");
+
+    if (imagePreview) imagePreview.classList.add("hidden");
+    if (uploadPlaceholder) uploadPlaceholder.classList.remove("hidden");
+    document.getElementById("file-name").classList.add("hidden");
+    btnUpload.classList.add("hidden");
+    selectedFile = null;
+    document.getElementById("file-upload").value = "";
+  } catch (err) {
+    errorContainer.textContent = "Unable to connect to the server.";
+    errorContainer.classList.remove("hidden");
+  } finally {
+    btnUpload.disabled = false;
+    btnUpload.textContent = "Mulai Analisis AI";
+  }
+}
+
+function tampilkanHasilDeteksi(data) {
+  const resultContainer = document.getElementById("detect-result");
+  const resultImage = document.getElementById("result-image");
+  const resultDetails = document.getElementById("result-details");
+
+  if (data.image_base64) {
+    resultImage.src = `data:image/jpeg;base64,${data.image_base64}`;
+  }
+
+  resultDetails.innerHTML = "";
+  if (data.total_detections > 0) {
+    data.results.forEach((item) => {
+      const confidencePercent = (item.confidence * 100).toFixed(0);
+      const formattedNarrative = parseMarkdown(item.narrative);
+
+      const div = document.createElement("div");
+      div.className =
+        "bg-white ring-1 ring-slate-200 shadow-sm rounded-2xl p-4 md:p-6 relative overflow-hidden";
+
+      div.innerHTML = `
+                <div class="absolute top-0 left-0 w-1 md:w-1.5 h-full bg-rose-500"></div>
+                <h4 class="text-base md:text-lg font-bold text-slate-800 mb-2 flex flex-col md:flex-row md:items-center justify-between gap-1">
+                    <span>${item.class}</span>
+                    <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-2 py-1 rounded-md w-fit">Confidence: ${confidencePercent}%</span>
+                </h4>
+                <div class="text-slate-600 text-xs md:text-sm leading-relaxed mt-2 md:mt-3">
+                    ${formattedNarrative}
+                </div>
+            `;
+      resultDetails.appendChild(div);
+    });
+  } else {
+    resultDetails.innerHTML = `
+            <div class="bg-emerald-50 text-emerald-700 p-4 rounded-2xl ring-1 ring-emerald-200 font-medium flex items-center gap-3 text-sm md:text-base">
+                <span class="text-xl">✅</span> No disease detected. The leaf appears healthy!
+            </div>
+        `;
+  }
+
+  resultContainer.classList.remove("hidden");
+
+  setTimeout(() => {
+    resultContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 500);
+}
+
+async function handleSendChat(event) {
+  event.preventDefault();
+
+  const inputEl = document.getElementById("chat-input");
+  const btnSend = document.getElementById("btn-chat-send");
+  const question = inputEl.value.trim();
+  if (!question) return;
+
+  const chatEmpty = document.getElementById("chat-empty");
+  if (chatEmpty) chatEmpty.classList.add("hidden");
+  appendMessage("user", question);
+  inputEl.value = "";
+  inputEl.disabled = true;
+  btnSend.disabled = true;
+  const loadingId = showChatLoading();
+
+  try {
+    const response = await fetch(API_ASK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: question }),
+    });
+
+    if (!response.ok) throw new Error("Failed");
+    removeChatLoading(loadingId);
+
+const aiBubble = appendMessage("assistant", "");
+    const chatBox = document.getElementById("chat-messages");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    
+    let fullTextFromAPI = ""; // Tangki penampung teks super cepat dari server
+    let textToDisplay = "";   // Teks yang akan diteteskan ke layar perlahan-lahan
+    let charIndex = 0;
+    const typingInterval = setInterval(() => {
+      if (charIndex < fullTextFromAPI.length) {
+        textToDisplay += fullTextFromAPI.slice(charIndex, charIndex + 4);
+        charIndex += 4;
+        
+        aiBubble.innerHTML = parseMarkdown(textToDisplay);
+        scrollToBottom(chatBox);
+      }
+    }, 15); 
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) {
+        const waitComplete = setInterval(() => {
+          if (charIndex >= fullTextFromAPI.length) {
+            clearInterval(typingInterval);
+            clearInterval(waitComplete);
+          }
+        }, 50);
+        break;
+      }
+      const chunkText = decoder.decode(value, { stream: true });
+      fullTextFromAPI += chunkText; 
+    }
+
+  } catch (err) {
+    removeChatLoading(loadingId);
+    appendMessage("assistant", "❌ Unable to connect to the server. Please try again.");
+  } finally {
+    inputEl.disabled = false;
+    btnSend.disabled = false;
+    inputEl.focus();
+  }
+}
+
+function appendMessage(role, content) {
+  const chatBox = document.getElementById("chat-messages");
+  const wrapper = document.createElement("div");
+  wrapper.className = `flex ${role === "user" ? "justify-end" : "justify-start"}`;
+
+  const bubble = document.createElement("div");
+  if (role === "user") {
+    bubble.className =
+      "max-w-[90%] md:max-w-[80%] p-3 md:p-4 rounded-2xl rounded-tr-sm bg-rose-500 text-white shadow-md shadow-rose-200 leading-relaxed text-sm md:text-[15px]";
+    bubble.textContent = content;
+  } else {
+    bubble.className =
+      "max-w-[90%] md:max-w-[80%] p-3 md:p-4 rounded-2xl rounded-tl-sm bg-white ring-1 ring-slate-200 text-slate-700 shadow-sm leading-relaxed text-sm md:text-[15px]";
+    bubble.innerHTML = content ? parseMarkdown(content) : "";
+  }
+
+  wrapper.appendChild(bubble);
+  chatBox.appendChild(wrapper);
+  scrollToBottom(chatBox);
+  return bubble;
+}
+
+function showChatLoading() {
+  const chatBox = document.getElementById("chat-messages");
+  const wrapper = document.createElement("div");
+  const id = "loading-" + Date.now();
+  wrapper.id = id;
+  wrapper.className = `flex justify-start`;
+  wrapper.innerHTML = `
+        <div class="bg-white ring-1 ring-slate-200 text-slate-500 p-4 md:p-5 rounded-2xl rounded-tl-sm shadow-sm flex items-center">
+            <div class="dot-flashing ml-2"></div>
+        </div>
+    `;
+  chatBox.appendChild(wrapper);
+  scrollToBottom(chatBox);
+  return id;
+}
+
+function removeChatLoading(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function scrollToBottom(element) {
+  element.scrollTo({
+    top: element.scrollHeight,
+    behavior: "smooth",
+  });
+}

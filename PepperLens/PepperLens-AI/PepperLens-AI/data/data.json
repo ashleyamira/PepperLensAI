@@ -1,0 +1,103 @@
+{
+  "Yellowing": {
+    "causes": [
+      "Begomovirus infection",
+      "Whiteflies (Bemisia tabaci), which can transmit the virus"
+    ],
+    "symptoms": [
+      "Yellow patches begin near leaf veins and may spread across the leaf",
+      "Leaves may curl upward, become smaller, and develop a thick or stiff texture"
+    ],
+    "treatment": [
+      "Remove severely infected plants and dispose of them away from the growing area",
+      "Manage whiteflies using locally approved pest-control methods and product label instructions",
+      "Maintain adequate plant nutrition and monitor unaffected plants"
+    ],
+    "prevention": [
+      "Choose virus-resistant pepper varieties where available",
+      "Use reflective mulch and yellow sticky traps to help monitor or reduce whiteflies",
+      "Remove weeds that can serve as pest or virus hosts",
+      "Inspect plants regularly for early symptoms"
+    ]
+  },
+  "Leaf Curl": {
+    "causes": [
+      "Thrips may cause upward curling",
+      "Broad mites may cause downward curling",
+      "Aphids may cause rolled or distorted leaves"
+    ],
+    "symptoms": [
+      "Upward curling and silvery discoloration on the underside of leaves",
+      "Downward curling, small new leaves, and browning",
+      "Stunted shoots, flower drop, and reduced yield"
+    ],
+    "treatment": [
+      "Remove heavily damaged plant parts",
+      "Identify the responsible pest before selecting an approved insecticide or miticide",
+      "Inspect and treat the undersides of leaves according to product directions",
+      "Maintain balanced nutrition after pest management"
+    ],
+    "prevention": [
+      "Allow adequate plant spacing and airflow",
+      "Use reflective mulch when appropriate",
+      "Prevent prolonged drought stress",
+      "Check the undersides of leaves, especially in hot and dry weather"
+    ]
+  },
+  "Leaf Spot": {
+    "causes": [
+      "Cercospora capsici fungus; spores may spread through wind, rain splash, and tools",
+      "Xanthomonas bacteria, favored by wet conditions"
+    ],
+    "symptoms": [
+      "Small dark-brown circular spots on leaves",
+      "Cercospora spots may have pale centers and dark edges",
+      "Severe infections can cause yellowing, wilting, and leaf drop",
+      "Spots can also occur on stems and fruit stalks"
+    ],
+    "treatment": [
+      "Remove infected leaves and dispose of them safely",
+      "Use an appropriate locally approved fungicide only after confirming the likely cause",
+      "Bacterial infections may require different management than fungal infections",
+      "Avoid excessive watering and improve airflow"
+    ],
+    "prevention": [
+      "Space plants adequately to reduce humidity",
+      "Maintain drainage and avoid standing water",
+      "Use mulch to limit soil splash",
+      "Maintain balanced plant nutrition"
+    ]
+  },
+  "Whitefly": {
+    "causes": [
+      "Whiteflies can multiply in hot, dry conditions and on nearby host plants",
+      "They feed on leaf sap and can transmit viruses including begomoviruses"
+    ],
+    "symptoms": [
+      "Small yellow feeding spots on leaves",
+      "Sticky honeydew and black sooty mold on leaves",
+      "Young leaves may turn yellow, curl, and become stunted if virus transmission occurs"
+    ],
+    "treatment": [
+      "Inspect the undersides of leaves for whiteflies and eggs",
+      "Use locally approved whitefly control products according to label directions",
+      "Remove plants with severe confirmed virus infection when appropriate"
+    ],
+    "prevention": [
+      "Install yellow sticky traps for monitoring",
+      "Encourage beneficial insects and manage nearby host weeds",
+      "Use insect netting for seedlings and small plantings",
+      "Keep the growing area clean and inspect plants frequently"
+    ]
+  },
+  "Healthy": {
+    "causes": [],
+    "symptoms": [
+      "No visible signs of disease detected"
+    ],
+    "treatment": [],
+    "prevention": [
+      "Continue regular monitoring, watering, and appropriate plant care"
+    ]
+  }
+}
